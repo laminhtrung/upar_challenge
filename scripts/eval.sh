@@ -1,0 +1,1 @@
+python evaluate.py --config configs/resnet50.yaml --checkpoint outputs/resnet50_baseline/best_model.pth

@@ -1,0 +1,35 @@
+experiment_name: resnet50_baseline
+seed: 42
+num_classes: 40
+device: cuda
+gpu_id: 0
+output_dir: outputs
+
+data:
+  train_csv: /kaggle/input/upar-dataset/data/annotations/phase1/train/train.csv
+  val_csv: /kaggle/input/upar-dataset/data/annotations/phase1/val/val.csv
+  test_csv: /kaggle/input/upar-dataset/data/annotations/phase1/test/test.csv
+  img_dirs:
+    - /kaggle/input/upar-dataset/data/Market1501/bounding_box_train
+    - /kaggle/input/upar-dataset/data/PA100k/release_data/release_data
+    - /kaggle/input/upar_challenge/data/PETA/images
+  image_size: [384, 128]
+  batch_size: 32
+  num_workers: 4
+  skiprows: 1
+
+model:
+  name: resnet50
+  pretrained: true
+  dropout: 0.5
+
+loss:
+  name: bce
+  use_auto_pos_weight: true
+
+train:
+  epochs: 25
+  lr: 0.001
+  weight_decay: 0.001
+  step_size: 10
+  gamma: 0.1

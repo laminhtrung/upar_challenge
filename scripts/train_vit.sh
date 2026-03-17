@@ -1,0 +1,1 @@
+python train.py --config configs/vit_b16.yaml
