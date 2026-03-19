@@ -1,4 +1,4 @@
-experiment_name: resnet50_baseline
+experiment_name: resnet50_baseline_withcw
 seed: 42
 num_classes: 40
 device: cuda
@@ -6,13 +6,13 @@ gpu_id: 0
 output_dir: outputs
 
 data:
-  train_csv: /kaggle/input/upar-dataset/data/annotations/phase1/train/train.csv
-  val_csv: /kaggle/input/upar-dataset/data/annotations/phase1/val/val.csv
-  test_csv: /kaggle/input/upar-dataset/data/annotations/phase1/test/test.csv
+  train_csv: /root/trunglm8/upar_challenge/raw_data/train.csv
+  val_csv: /root/trunglm8/upar_challenge/raw_data/val.csv
+  test_csv: /root/trunglm8/upar_challenge/raw_data/test.csv
   img_dirs:
-    - /kaggle/input/upar-dataset/data/Market1501/bounding_box_train
-    - /kaggle/input/upar-dataset/data/PA100k/release_data/release_data
-    - /kaggle/input/upar_challenge/data/PETA/images
+    - /root/trunglm8/upar_challenge/raw_data/data/Market1501/bounding_box_train
+    - /root/trunglm8/upar_challenge/raw_data/data/PA100k/release_data/release_data
+    - /root/trunglm8/upar_challenge/raw_data/data/PETA/images
   image_size: [384, 128]
   batch_size: 32
   num_workers: 4
@@ -25,11 +25,12 @@ model:
 
 loss:
   name: bce
-  use_auto_pos_weight: true
+  use_auto_class_weight: true
 
 train:
-  epochs: 25
-  lr: 0.001
+  epochs: 40
+  lr: 0.0005
   weight_decay: 0.001
-  step_size: 10
+  step_size: 5
   gamma: 0.1
+  scheduler : cosine

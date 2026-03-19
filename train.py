@@ -34,33 +34,92 @@ def load_yaml(path):
         return yaml.safe_load(f)
 
 
-def plot_history(history, save_path):
-    plt.figure(figsize=(14, 4))
+import os
+import matplotlib.pyplot as plt
 
-    plt.subplot(1, 3, 1)
+
+def plot_loss_curve(history, save_path):
+    plt.figure(figsize=(8, 5))
     plt.plot(history["train_loss"], label="train_loss")
     plt.plot(history["val_loss"], label="val_loss")
-    plt.xlabel("epoch")
-    plt.ylabel("loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Train Loss vs Val Loss")
     plt.legend()
-    plt.title("Loss")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
 
-    plt.subplot(1, 3, 2)
+
+def plot_map_curve(history, save_path):
+    plt.figure(figsize=(8, 5))
     plt.plot(history["mAP"], label="mAP")
-    plt.plot(history["f1_macro"], label="f1_macro")
-    plt.xlabel("epoch")
-    plt.ylabel("score")
+    plt.xlabel("Epoch")
+    plt.ylabel("mAP")
+    plt.title("mAP Curve")
     plt.legend()
-    plt.title("mAP / F1")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
 
-    plt.subplot(1, 3, 3)
-    plt.plot(history["label_acc"], label="label_acc")
-    plt.plot(history["exact_match_acc"], label="exact_match_acc")
-    plt.xlabel("epoch")
-    plt.ylabel("accuracy")
+
+def plot_f1_curve(history, save_path):
+    plt.figure(figsize=(8, 5))
+    plt.plot(history["f1_macro"], label="F1 Macro")
+    plt.xlabel("Epoch")
+    plt.ylabel("F1 Score")
+    plt.title("F1 Macro Curve")
     plt.legend()
-    plt.title("Accuracy")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
 
+
+def plot_exact_match_curve(history, save_path):
+    plt.figure(figsize=(8, 5))
+    plt.plot(history["exact_match_acc"], label="Exact Match Accuracy")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.title("Exact Match Accuracy Curve")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+
+
+def plot_best_class_accuracy(history, class_names, save_path):
+    best_acc_per_class = history.get("best_acc_per_class", None)
+    best_epoch = history.get("best_epoch", None)
+
+    if best_acc_per_class is None:
+        print("[Warning] No best_acc_per_class found in history.")
+        return
+
+    plt.figure(figsize=(16, 8))
+    plt.bar(range(len(class_names)), best_acc_per_class)
+    plt.xticks(range(len(class_names)), class_names, rotation=90)
+    plt.xlabel("Class")
+    plt.ylabel("Accuracy")
+    plt.title(f"Per-class Accuracy at Best Model (Epoch {best_epoch})")
+    plt.grid(True, axis="y")
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    
+def plot_lr_curve(history, save_path):
+    import matplotlib.pyplot as plt
+
+    plt.figure(figsize=(8, 5))
+    plt.plot(history["lr"], label="Learning Rate")
+    plt.xlabel("Epoch")
+    plt.ylabel("LR")
+    plt.title("Learning Rate Schedule")
+    plt.legend()
+    plt.grid(True)
     plt.tight_layout()
     plt.savefig(save_path)
     plt.close()
@@ -127,6 +186,16 @@ def main(config_path):
         dropout=cfg["model"].get("dropout", 0.5),
         num_parts=cfg["model"].get("num_parts", 6),
         reduced_dim=cfg["model"].get("reduced_dim", 256),
+        backbone_name=cfg["model"].get("backbone_name", "efficientnet_b0"),
+        d_model=cfg["model"].get("d_model", 256),
+        nhead=cfg["model"].get("nhead", 8),
+        num_transformer_layers=cfg["model"].get("num_transformer_layers", 2),
+        dim_feedforward=cfg["model"].get("dim_feedforward", 512),
+        transformer_dropout=cfg["model"].get("transformer_dropout", 0.1),
+        cnn_name=cfg["model"].get("cnn_name", "efficientnet_b0"),
+        transformer_name=cfg["model"].get("transformer_name", "swin_tiny_patch4_window7_224"),
+        fusion_dim=cfg["model"].get("fusion_dim", 256),
+        image_size=tuple(cfg["data"]["image_size"]),
     ).to(device)
 
     class_weights = None
@@ -148,22 +217,34 @@ def main(config_path):
     
     criterion = build_loss(
         loss_name=cfg["loss"]["name"],
-        pos_weight=None,
         weight=class_weights
     )
-
+    print(criterion)
+    print("class_weights:", class_weights)
+    print(cfg["loss"])
     optimizer = optim.AdamW(
         model.parameters(),
         lr=cfg["train"]["lr"],
         weight_decay=cfg["train"]["weight_decay"]
     )
 
-    scheduler = optim.lr_scheduler.StepLR(
-        optimizer,
-        step_size=cfg["train"]["step_size"],
-        gamma=cfg["train"]["gamma"]
-    )
-
+    scheduler_name = cfg["train"].get("scheduler", "step")
+    print("scheduler_name =", scheduler_name)
+    
+    
+    if scheduler_name == "cosine":
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=int(cfg["train"]["epochs"]),
+            eta_min=float(cfg["train"].get("eta_min", 1e-6))
+        )
+    else:
+        scheduler = optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=int(cfg["train"]["step_size"]),
+            gamma=cfg["train"]["gamma"]
+        )
+    print("scheduler =", scheduler)
     trainer = Trainer(
         model=model,
         criterion=criterion,
@@ -180,8 +261,16 @@ def main(config_path):
         epochs=cfg["train"]["epochs"]
     )
 
-    plot_history(history, os.path.join(run_dir, "training_curves.png"))
-    print(f"[Done] Results saved to {run_dir}")
+    plot_loss_curve(history, os.path.join(run_dir, "curve_loss.png"))
+    plot_map_curve(history, os.path.join(run_dir, "curve_map.png"))
+    plot_f1_curve(history, os.path.join(run_dir, "curve_f1_macro.png"))
+    plot_exact_match_curve(history, os.path.join(run_dir, "curve_exact_match_acc.png"))
+    plot_lr_curve(history, os.path.join(run_dir, "curve_lr.png"))
+    plot_best_class_accuracy(
+        history,
+        CLASS_NAMES,
+        os.path.join(run_dir, "best_model_per_class_accuracy.png")
+    )
 
 
 if __name__ == "__main__":

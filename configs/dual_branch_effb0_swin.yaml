@@ -1,4 +1,4 @@
-experiment_name: pcb_baseline
+experiment_name: dual_branch_effb0_swin
 seed: 42
 num_classes: 40
 device: cuda
@@ -14,25 +14,25 @@ data:
     - /root/trunglm8/upar_challenge/raw_data/data/PA100k/release_data/release_data
     - /root/trunglm8/upar_challenge/raw_data/data/PETA/images
   image_size: [384, 128]
-  batch_size: 32
+  batch_size: 16
   num_workers: 4
   skiprows: 1
 
 model:
-  name: pcb
+  name: dual_branch_effb0_swin
   pretrained: true
-  num_parts: 6
-  reduced_dim: 256
-  dropout: 0.5
+  dropout: 0.4
+  cnn_name: efficientnet_b0
+  transformer_name: swin_tiny_patch4_window7_224
+  fusion_dim: 256
 
 loss:
   name: bce
   use_auto_class_weight: true
 
 train:
-  epochs: 25
-  lr: 0.001
-  weight_decay: 0.001
-  step_size: 40
-  gamma: 0.1
-  scheduler : cosine
+  epochs: 40
+  lr: 0.0002
+  weight_decay: 0.0001
+  scheduler: cosine
+  eta_min: 1e-6

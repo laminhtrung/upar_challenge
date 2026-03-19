@@ -29,6 +29,8 @@ htmlcov/
 Thumbs.db
 .idea/
 .vscode/
+.python-version
+*.swp
 
 # Training outputs
 outputs/
@@ -37,9 +39,30 @@ outputs/
 *.ckpt
 *.onnx
 
+# Test results
+test_result/
+
 # Local data artifacts
 raw_data/
 data/
 
 # Logs
 *.log
+*.out
+*.err
+
+# Local scratch
+.cache/
+tmp/
+temp/
+*.tmp
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# ML experiment tracking
+wandb/
+tensorboard/
+mlruns/

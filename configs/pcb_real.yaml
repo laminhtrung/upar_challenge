@@ -1,38 +1,54 @@
-experiment_name: pcb_baseline
+experiment_name: pcb_real_withcw
 seed: 42
 num_classes: 40
 device: cuda
 gpu_id: 0
 output_dir: outputs
 
+# ================= DATA =================
 data:
   train_csv: /root/trunglm8/upar_challenge/raw_data/train.csv
   val_csv: /root/trunglm8/upar_challenge/raw_data/val.csv
   test_csv: /root/trunglm8/upar_challenge/raw_data/test.csv
+
   img_dirs:
     - /root/trunglm8/upar_challenge/raw_data/data/Market1501/bounding_box_train
     - /root/trunglm8/upar_challenge/raw_data/data/PA100k/release_data/release_data
     - /root/trunglm8/upar_challenge/raw_data/data/PETA/images
+
   image_size: [384, 128]
   batch_size: 32
   num_workers: 4
   skiprows: 1
 
+# ================= MODEL =================
 model:
-  name: pcb
+  name: pcb_real
   pretrained: true
-  num_parts: 6
+
+  backbone_name: resnet50   # 👈 match factory
+  num_parts: 6              # 👈 PCB chuẩn
   reduced_dim: 256
   dropout: 0.5
 
+# ================= LOSS =================
 loss:
   name: bce
   use_auto_class_weight: true
+  label_smoothing: 0.1     # 🔥 giúp ổn định training
 
+# ================= TRAIN =================
 train:
   epochs: 25
-  lr: 0.001
-  weight_decay: 0.001
-  step_size: 40
-  gamma: 0.1
-  scheduler : cosine
+  lr: 0.0005                # 🔥 cực quan trọng cho PCB
+  weight_decay: 0.0001
+
+  scheduler: cosine
+
+  # nếu code bạn support thì bật
+  warmup_epochs: 3
+  min_lr: 0.000001
+
+# ================= EVAL =================
+eval:
+  threshold: 0.5

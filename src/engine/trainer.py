@@ -29,7 +29,11 @@ class Trainer:
             "exact_match_acc": [],
             "label_acc": [],
             "f1_macro": [],
-            "mAP": []
+            "mAP": [],
+            "lr": [],
+            "best_epoch": None,
+            "best_acc_per_class": None,
+            "best_ap_per_class": None
         }
 
     def train_one_epoch(self, loader):
@@ -43,6 +47,10 @@ class Trainer:
 
             self.optimizer.zero_grad()
             logits = self.model(images)
+            
+            epsilon = 0.1
+            labels = labels * (1 - epsilon) + 0.5 * epsilon
+
             loss = self.criterion(logits, labels)
             loss.backward()
             self.optimizer.step()
@@ -127,11 +135,26 @@ class Trainer:
 
             if metrics["mAP"] > best_map:
                 best_map = metrics["mAP"]
+                self.history["best_epoch"] = epoch + 1
+                self.history["best_acc_per_class"] = [float(x) for x in metrics["acc_per_class"]]
+                self.history["best_ap_per_class"] = [float(x) for x in metrics["ap_per_class"]]
+
                 save_checkpoint(self.model, os.path.join(self.output_dir, "best_model.pth"))
                 print("[Checkpoint] Saved best_model.pth")
 
+            # log LR hiện tại trước khi step
+            lr_before_step = self.optimizer.param_groups[0]["lr"]
+            print(f"LR before step   : {lr_before_step:.8f}")
+
             if self.scheduler is not None:
                 self.scheduler.step()
+
+            # log LR sau khi step
+            lr_after_step = self.optimizer.param_groups[0]["lr"]
+            print(f"LR after step    : {lr_after_step:.8f}")
+
+            # lưu cái sau step để thấy LR của epoch tiếp theo
+            self.history["lr"].append(lr_after_step)
 
             with open(os.path.join(self.output_dir, "history.json"), "w") as f:
                 json.dump(self.history, f, indent=2)

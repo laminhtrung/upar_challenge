@@ -26,14 +26,14 @@ def postprocess_predictions(logits):
     batch_idx = torch.arange(probs.shape[0], device=probs.device)
 
     # multiclass groups -> argmax
-    for key in ["age", "hair", "ub_color", "lb_color", "lb_type", "glasses"]:
+    for key in ["age", "hair", "ub_color", "lb_color", "lb_type"]:
         s, e = CLASS_GROUPS[key]
         group_probs = probs[:, s:e]
         max_idx = group_probs.argmax(dim=1)
         preds[batch_idx, s + max_idx] = 1.0
 
     # binary groups -> threshold 0.5
-    for key in ["gender", "ub_len", "lb_len", "backpack", "bag", "hat"]:
+    for key in ["gender", "ub_len", "lb_len", "backpack", "bag", "hat", "glasses"]:
         s, e = CLASS_GROUPS[key]
         preds[:, s:e] = (probs[:, s:e] > 0.5).float()
 

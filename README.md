@@ -1,47 +1,42 @@
 # UPAR Challenge Baseline
 
-PyTorch training code for pedestrian attribute recognition with 40 binary / grouped-multiclass attributes. The repository trains a single model over mixed person-image sources and includes scripts for training, evaluation, and single-image inference.
+PyTorch code for pedestrian attribute recognition over 40 attributes. The repository includes training, evaluation, and batch inference scripts, plus several baseline and hybrid model variants.
 
-Supported backbones:
+## Included Model Variants
+
+The repository currently includes configs and/or factory branches for:
 
 - `resnet50`
 - `efficientnet_b0`
 - `vit_b16`
 - `swin_t`
-- `pcb` (a ResNet50-based part pooling variant)
+- `pcb`
+- `pcb_real`
+- `hybrid_effb0_transformer`
+- `hybrid_effb0_transformer_v3`
+- `dual_branch_effb0_swin`
+- `effb0_part`
 
-## What The Code Does
+The checked-in configs are in [`configs/`](/root/trunglm8/upar_challenge/configs).
 
-The project builds a 40-logit attribute predictor and evaluates it with:
+## Metrics And Prediction Rules
 
-- validation loss
+Validation and evaluation report:
+
+- loss
 - exact-match accuracy
-- per-label accuracy
+- label accuracy
 - macro F1
-- mean average precision (mAP)
-- per-class AP / accuracy
+- mAP
+- per-class AP
+- per-class accuracy
 
-Prediction post-processing is not plain multilabel thresholding for every class. Some attribute groups are decoded with `argmax` as mutually exclusive categories:
+Post-processing is group-aware rather than pure independent thresholding:
 
-- age: 3 classes
-- hair: 3 classes
-- upper-body color: 12 classes
-- lower-body color: 12 classes
-- lower-body type: 2 classes
-- glasses: 2 classes
-
-The remaining attributes are thresholded at `0.5`:
-
-- gender
-- upper-body sleeve length
-- lower-body length
-- backpack
-- bag
-- hat
+- `argmax` groups: age, hair, upper-body color, lower-body color, lower-body type
+- thresholded at `0.5`: gender, upper-body length, lower-body length, backpack, bag, glasses, hat
 
 ## Attribute List
-
-The model predicts these 40 labels:
 
 `Age-Young`, `Age-Adult`, `Age-Old`, `Gender-Female`, `Hair-Length-Short`, `Hair-Length-Long`, `Hair-Length-Bald`, `UpperBody-Length-Short`, `UpperBody-Color-Black`, `UpperBody-Color-Blue`, `UpperBody-Color-Brown`, `UpperBody-Color-Green`, `UpperBody-Color-Grey`, `UpperBody-Color-Orange`, `UpperBody-Color-Pink`, `UpperBody-Color-Purple`, `UpperBody-Color-Red`, `UpperBody-Color-White`, `UpperBody-Color-Yellow`, `UpperBody-Color-Other`, `LowerBody-Length-Short`, `LowerBody-Color-Black`, `LowerBody-Color-Blue`, `LowerBody-Color-Brown`, `LowerBody-Color-Green`, `LowerBody-Color-Grey`, `LowerBody-Color-Orange`, `LowerBody-Color-Pink`, `LowerBody-Color-Purple`, `LowerBody-Color-Red`, `LowerBody-Color-White`, `LowerBody-Color-Yellow`, `LowerBody-Color-Other`, `LowerBody-Type-Trousers&Shorts`, `LowerBody-Type-Skirt&Dress`, `Accessory-Backpack`, `Accessory-Bag`, `Accessory-Glasses-Normal`, `Accessory-Glasses-Sun`, `Accessory-Hat`
 
@@ -49,18 +44,19 @@ The model predicts these 40 labels:
 
 ```text
 .
-├── configs/                 # YAML configs for each backbone
-├── scripts/                 # Small helper shell scripts
+├── configs/        # YAML experiment configs
+├── outputs/        # Training runs and checkpoints
+├── raw_data/       # Local datasets and CSV annotations in this workspace
+├── scripts/        # Small helper shell scripts
 ├── src/
-│   ├── data/                # Dataset loader and image transforms
-│   ├── engine/              # Losses and training loop
-│   ├── models/              # Model definitions and factory
-│   └── utils/               # Metrics, checkpointing, seeding, class weights
-├── train.py                 # Training entrypoint
-├── evaluate.py              # Evaluation entrypoint
-├── inference.py             # Single-image inference entrypoint
-├── requirements.txt
-└── raw_data/                # Local data/annotations currently present in this workspace
+│   ├── data/       # Dataset loader and image transforms
+│   ├── engine/     # Losses and trainer
+│   ├── models/     # Model definitions and factory
+│   └── utils/      # Metrics, checkpoints, seeds, class weights
+├── evaluate.py
+├── inference.py
+├── train.py
+└── requirements.txt
 ```
 
 ## Installation
@@ -73,47 +69,28 @@ pip install -r requirements.txt
 
 ## Data Format
 
-`src/data/dataset.py` expects a CSV where:
+[`src/data/dataset.py`](/root/trunglm8/upar_challenge/src/data/dataset.py) loads a CSV with:
 
-- column 1 is the image path
-- columns 2..41 are numeric labels
+- column 1: image path
+- remaining columns: numeric labels or metadata
 
-Example:
+Current loader behavior matters:
+
+- It resolves images by `basename`, not by the full relative path.
+- It scans `data.img_dirs` in order and picks the first matching filename.
+- Rows whose image filename is not found are silently skipped.
+- It reads labels with `iloc[:, 1:-1]`, so the last CSV column is ignored by the current code.
+- Most checked-in configs use `skiprows: 1`, which assumes a header row exists.
+
+Example row from [`raw_data/test.csv`](/root/trunglm8/upar_challenge/raw_data/test.csv):
 
 ```csv
-Market1501/bounding_box_train/0002_c1s1_000451_03.jpg,0,1,0,0,1,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0
+MEVID/images/0.jpg,0,1,0,1,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0
 ```
-
-Important loader behavior:
-
-- The loader strips the directory part with `os.path.basename(...)` and then searches each directory in `data.img_dirs` for a matching filename.
-- Because of that, the first column can be a relative dataset path, but matching ultimately depends on the filename only.
-- If two datasets contain the same basename, the first matching directory in `img_dirs` wins.
-- `skiprows` defaults to `1` in the configs. If your CSV has no header row, set `skiprows: 0` or the first sample will be skipped.
-
-## Data In This Workspace
-
-This checkout already contains a large `raw_data/` tree, including:
-
-- `raw_data/data/Market1501/...`
-- `raw_data/data/PA100k/...`
-- `raw_data/data/phase1/train/train_0.csv`, `train_1.csv`, `train_2.csv`
-- `raw_data/data/phase1/val_task1/val_all.csv`
-- `raw_data/data/phase2/annotations/val_gt/val_gt.csv`
-- `raw_data/data/phase2/annotations/test_task2/test_imgs.csv`
-- `raw_data/data/phase2/annotations/test_task2/test_queries.csv`
-- `raw_data/test.csv`
-
-Current config caveats:
-
-- `configs/efficientnet_b0.yaml` points to `/root/trunglm8/upar_challenge/raw_data/train.csv` and `/root/trunglm8/upar_challenge/raw_data/val.csv`, but those files are not present in this repo.
-- The other configs point to old Kaggle-style absolute paths and must be edited before running locally.
-- Configs reference a `PETA/images` directory, but that directory is not present in this workspace.
-- Some YAML files contain `use_auto_pos_weight`, but the training code currently uses `loss.pos_weight`, `loss.class_weight`, or `loss.use_auto_class_weight`.
 
 ## Configuration
 
-Each config in `configs/*.yaml` follows this structure:
+The training entrypoint expects a config shaped like this:
 
 ```yaml
 experiment_name: resnet50_baseline
@@ -133,7 +110,7 @@ data:
   image_size: [384, 128]
   batch_size: 32
   num_workers: 4
-  skiprows: 0
+  skiprows: 1
 
 model:
   name: resnet50
@@ -148,21 +125,23 @@ loss:
 
 train:
   epochs: 25
-  lr: 0.001
+  lr: 0.0005
   weight_decay: 0.001
   step_size: 10
   gamma: 0.1
+  scheduler: step
 ```
 
-Model-specific options:
+Model-specific options currently used by the factory:
 
-- `pcb` also supports `num_parts` and `reduced_dim`
-- `vit_b16` and `swin_t` are configured for `224x224`
-- `resnet50`, `efficientnet_b0`, and `pcb` are configured for `384x128`
+- `pcb`, `pcb_real`: `num_parts`, `reduced_dim`
+- `hybrid_effb0_transformer`, `hybrid_effb0_transformer_v3`: `backbone_name`, `d_model`, `nhead`, `num_transformer_layers`, `dim_feedforward`, `transformer_dropout`
+- `hybrid_effb0_transformer_v3`: `num_parts`
+- `dual_branch_effb0_swin`: `cnn_name`, `transformer_name`, `fusion_dim`
 
 ## Training
 
-Edit one config first so all paths match your machine, then run:
+Update the dataset paths in a config first, then run:
 
 ```bash
 python train.py --config configs/resnet50.yaml
@@ -175,27 +154,29 @@ bash scripts/train_resnet.sh
 bash scripts/train_vit.sh
 ```
 
-Training outputs are written to:
+Each run is written under `outputs/<experiment_name>/` and currently includes:
 
-```text
-outputs/<experiment_name>/
-├── best_model.pth
-├── last_model.pth
-├── history.json
-└── training_curves.png
-```
+- `best_model.pth`
+- `last_model.pth`
+- `history.json`
+- `curve_loss.png`
+- `curve_map.png`
+- `curve_f1_macro.png`
+- `curve_exact_match_acc.png`
+- `curve_lr.png`
+- `best_model_per_class_accuracy.png`
 
 ## Evaluation
 
-`evaluate.py` expects `data.test_csv` in the config to point to a labeled split.
+[`evaluate.py`](/root/trunglm8/upar_challenge/evaluate.py) expects `data.test_csv` to be a labeled split:
 
 ```bash
 python evaluate.py \
   --config configs/resnet50.yaml \
-  --checkpoint outputs/resnet50_baseline/best_model.pth
+  --checkpoint outputs/resnet50_baseline_withcw/best_model.pth
 ```
 
-The included helper script is:
+Helper script:
 
 ```bash
 bash scripts/eval.sh
@@ -203,46 +184,42 @@ bash scripts/eval.sh
 
 ## Inference
 
-Run single-image inference with a trained checkpoint:
+[`inference.py`](/root/trunglm8/upar_challenge/inference.py) currently runs on a directory of images, not a single file:
 
 ```bash
 python inference.py \
   --config configs/resnet50.yaml \
-  --checkpoint outputs/resnet50_baseline/best_model.pth \
-  --image /path/to/image.jpg
+  --checkpoint outputs/resnet50_baseline_withcw/best_model.pth \
+  --image_dir /path/to/images \
+  --num_images 20 \
+  --random_sample
 ```
 
-The script prints one line per attribute with binary prediction and probability.
+The script:
 
-## Model Notes
+- loads up to `num_images` from `image_dir`
+- prints grouped positive predictions per image
+- saves annotated visualizations to `test_result/<model_name>/vis_20/`
 
-- `resnet50`: torchvision ResNet-50 backbone with a BN-ReLU-Dropout-Linear head
-- `efficientnet_b0`: torchvision EfficientNet-B0 with a replaced classifier
-- `vit_b16`: timm `vit_base_patch16_224`
-- `swin_t`: timm `swin_tiny_patch4_window7_224`
-- `pcb`: ResNet-50 feature extractor with adaptive vertical part pooling and a shared attribute head
+## Notes On This Checkout
 
-## Implementation Notes
+This workspace already contains local data under [`raw_data/`](/root/trunglm8/upar_challenge/raw_data), plus several previous runs under [`outputs/`](/root/trunglm8/upar_challenge/outputs).
 
-- Loss: `BCEWithLogitsLoss`
-- Optimizer: `AdamW`
-- Scheduler: `StepLR`
-- Augmentation: resize, random rotation, random horizontal flip, normalize
-- Checkpointing: best model is selected by validation `mAP`
-- Reproducibility: seed is set for Python, NumPy, and PyTorch; cuDNN runs in deterministic mode
+Important caveats in the current repository state:
 
-## Known Limitations
+- Most configs use absolute paths tied to this workspace.
+- Several configs reference `raw_data/train.csv` and `raw_data/val.csv`, which are not present in the repo.
+- Configs still reference `raw_data/data/PETA/images`, but that directory is not present here.
+- [`configs/vit_b16.yaml`](/root/trunglm8/upar_challenge/configs/vit_b16.yaml) currently sets `model.name: vit_s16`, while the factory supports `vit_b16`.
+- [`configs/effb0_part.yaml`](/root/trunglm8/upar_challenge/configs/effb0_part.yaml) uses a different schema from what [`train.py`](/root/trunglm8/upar_challenge/train.py) expects.
+- [`src/models/factory.py`](/root/trunglm8/upar_challenge/src/models/factory.py) has an `effb0_part` branch but does not currently import `EfficientNetB0PartAttrModel`.
+- Training applies fixed label smoothing (`epsilon = 0.1`) inside the trainer.
 
-- Several config files are templates and are not runnable without path fixes.
-- The repo does not include a script to merge or generate final `train.csv` / `val.csv` files.
-- Empty placeholder modules exist in `src/configs.py`, `src/engine/evaluator.py`, `src/models/cnn_heads.py`, `src/utils/common.py`, and `src/utils/logger.py`.
-- The dataset loader silently drops rows whose image basename cannot be found in any configured image directory.
+## Quick Start
 
-## Quick Start Checklist
-
-1. Install dependencies from `requirements.txt`.
-2. Update one YAML config so `train_csv`, `val_csv`, `test_csv`, and `img_dirs` point to real local files.
-3. Set `skiprows` correctly for your CSV format.
+1. Install dependencies.
+2. Fix the dataset paths in one config.
+3. Verify `skiprows` and your CSV column layout.
 4. Train with `python train.py --config ...`.
 5. Evaluate with `python evaluate.py --config ... --checkpoint ...`.
-6. Run `inference.py` for single-image inspection.
+6. Run directory inference with `python inference.py --config ... --checkpoint ... --image_dir ...`.
