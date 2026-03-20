@@ -1,4 +1,4 @@
-experiment_name: resnet50_baseline_withpw
+experiment_name: resnet50_baseline_withpw_2
 seed: 42
 num_classes: 40
 device: cuda
@@ -30,7 +30,7 @@ loss:
   pos_weight_max: 10.0
 
 train:
-  epochs: 40
+  epochs: 30
   lr: 0.0005
   weight_decay: 0.001
   step_size: 5

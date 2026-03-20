@@ -1,4 +1,4 @@
-experiment_name: pcb_real
+experiment_name: pcb_real_2
 seed: 42
 num_classes: 40
 device: cuda
@@ -41,7 +41,7 @@ loss:
 
 # ================= TRAIN =================
 train:
-  epochs: 25
+  epochs: 30
   lr: 0.0005                # 🔥 cực quan trọng cho PCB
   weight_decay: 0.0001
 

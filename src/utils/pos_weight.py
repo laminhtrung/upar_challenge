@@ -11,6 +11,7 @@ def compute_pos_weight(train_loader, num_classes, device, max_value=10.0):
 
     neg_counts = total_samples - pos_counts
     pos_weight = neg_counts / (pos_counts + 1e-6)
+    pos_weight = torch.sqrt(pos_weight)
 
     # 🔥 thêm dòng này
     pos_weight = torch.clamp(pos_weight, max=max_value)
