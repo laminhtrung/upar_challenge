@@ -33,18 +33,18 @@ Thumbs.db
 *.swp
 
 # Training outputs
-outputs/
+/outputs/
 *.pth
 *.pt
 *.ckpt
 *.onnx
 
 # Test results
-test_result/
+/test_result/
 
 # Local data artifacts
-raw_data/
-data/
+/raw_data/
+/data/
 
 # Logs
 *.log

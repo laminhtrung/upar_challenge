@@ -19,7 +19,7 @@ data:
   skiprows: 1
 
 model:
-  name: vit_s16
+  name: vit_b16
   pretrained: true
   dropout: 0.1
 

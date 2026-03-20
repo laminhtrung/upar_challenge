@@ -14,6 +14,8 @@ from src.engine.losses import build_loss
 from src.engine.trainer import Trainer
 from src.utils.seed import set_seed
 
+from src.utils.pos_weight import compute_pos_weight
+
 
 CLASS_NAMES = [
     "Age-Young", "Age-Adult", "Age-Old", "Gender-Female", "Hair-Length-Short",
@@ -175,9 +177,21 @@ def main(config_path):
         pin_memory=True,
     )
 
-    pos_weight = cfg.get("loss", {}).get("pos_weight", None)
-    if pos_weight is not None:
-        pos_weight = torch.tensor(pos_weight, dtype=torch.float32, device=device)
+    pos_weight = None
+    if cfg.get("loss", {}).get("use_pos_weight", False):
+        pos_weight = compute_pos_weight(
+            train_loader=train_loader,
+            num_classes=cfg["num_classes"],
+            device=device,
+            max_value=cfg.get("loss", {}).get("pos_weight_max", 10.0)
+        )
+        print("[Loss] Auto pos_weight =", pos_weight)
+        print(
+            "[Loss] pos_weight stats -> "
+            f"min: {pos_weight.min().item():.4f}, "
+            f"max: {pos_weight.max().item():.4f}, "
+            f"mean: {pos_weight.mean().item():.4f}"
+        )
 
     model = build_model(
         model_name=cfg["model"]["name"],
@@ -217,7 +231,9 @@ def main(config_path):
     
     criterion = build_loss(
         loss_name=cfg["loss"]["name"],
-        weight=class_weights
+        pos_weight=pos_weight,
+        weight=class_weights,
+        device=device
     )
     print(criterion)
     print("class_weights:", class_weights)

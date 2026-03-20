@@ -1,4 +1,4 @@
-experiment_name: pcb_real_withcw
+experiment_name: pcb_real
 seed: 42
 num_classes: 40
 device: cuda
@@ -34,7 +34,9 @@ model:
 # ================= LOSS =================
 loss:
   name: bce
-  use_auto_class_weight: true
+  use_auto_class_weight: false
+  use_pos_weight: true
+  pos_weight_max: 10.0
   label_smoothing: 0.1     # 🔥 giúp ổn định training
 
 # ================= TRAIN =================

@@ -1,4 +1,4 @@
-experiment_name: resnet50_baseline_withcw
+experiment_name: resnet50_baseline_withpw
 seed: 42
 num_classes: 40
 device: cuda
@@ -25,7 +25,9 @@ model:
 
 loss:
   name: bce
-  use_auto_class_weight: true
+  use_auto_class_weight: false
+  use_pos_weight: true
+  pos_weight_max: 10.0
 
 train:
   epochs: 40
