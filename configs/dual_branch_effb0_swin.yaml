@@ -28,7 +28,10 @@ model:
 
 loss:
   name: bce
-  use_auto_class_weight: true
+  use_auto_class_weight: false
+  use_pos_weight: true
+  pos_weight_max: 10.0
+  label_smoothing: 0.1 
 
 train:
   epochs: 40
