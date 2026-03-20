@@ -5,7 +5,8 @@ from .swin_attr import SwinAttrModel
 from .pcb_attr import PCBAttrModel
 from .pcb_real import PCBRealAttrModel
 from .hybrid_effb0_transformer_v3 import HybridEfficientNetTransformerV3
-
+from .resnet_update import ResNetUpdateModel
+from .efficientnet_update import EfficientNetUpdateModel
 
 from .hybrid_effb0_transformer import HybridEfficientNetTransformer
 from .dual_branch_effb0_swin import DualBranchEfficientNetSwin
@@ -20,9 +21,23 @@ def build_model(model_name, num_classes, pretrained=True, **kwargs):
             pretrained=pretrained,
             dropout=kwargs.get("dropout", 0.5)
         )
+        
+    elif model_name == "resnet_update":
+        return ResNetUpdateModel(
+            num_classes=num_classes,
+            pretrained=pretrained,
+            dropout=kwargs.get("dropout", 0.5)
+        )
 
     elif model_name == "efficientnet_b0":
         return EfficientNetAttrModel(
+            num_classes=num_classes,
+            pretrained=pretrained,
+            dropout=kwargs.get("dropout", 0.3)
+        )
+
+    elif model_name == "efficientnet_update":
+        return EfficientNetUpdateModel(
             num_classes=num_classes,
             pretrained=pretrained,
             dropout=kwargs.get("dropout", 0.3)

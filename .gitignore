@@ -33,18 +33,19 @@ Thumbs.db
 *.swp
 
 # Training outputs
-/outputs/
+outputs/
 *.pth
 *.pt
 *.ckpt
 *.onnx
 
 # Test results
-/test_result/
+test_result/
 
 # Local data artifacts
-/raw_data/
-/data/
+raw_data/
+raw_data.zip
+data/
 
 # Logs
 *.log
@@ -68,4 +69,4 @@ tensorboard/
 mlruns/
 
 # Local analysis outputs
-/analysis/analysis_*/
+analysis/analysis_*/

@@ -7,3 +7,5 @@ from .pcb_real import PCBRealAttrModel
 from .hybrid_effb0_transformer import HybridEfficientNetTransformer
 from .dual_branch_effb0_swin import DualBranchEfficientNetSwin
 from .effb0_part_attr import EfficientNetB0PartAttrModel
+from .resnet_update import ResNetUpdateModel
+from .efficientnet_update import EfficientNetUpdateModel
